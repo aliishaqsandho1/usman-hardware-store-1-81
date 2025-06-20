@@ -20,13 +20,12 @@ import { Package, Search, Plus, Edit, Trash2, AlertTriangle, RefreshCw, FileText
 import { useToast } from "@/hooks/use-toast";
 import { productsApi, categoriesApi, unitsApi } from "@/services/api";
 import { ProductDetailsModal } from "@/components/sales/ProductDetailsModal";
-import { FilteredProductsModal } from "@/components/FilteredProductsModal";
-import { Eye } from "lucide-react";
-import { generateSKU } from "@/utils/skuGenerator";
-import jsPDF from 'jspdf';
+import { useGlobalModal } from "@/contexts/GlobalModalContext";
+import { StockStatusBadge, ClickableLowStock } from "@/components/ui/stock-indicators";
 
 const Products = () => {
   const { toast } = useToast();
+  const { openLowStockModal } = useGlobalModal();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -46,11 +45,6 @@ const Products = () => {
     totalPages: 1,
     totalItems: 0,
     itemsPerPage: 20
-  });
-  const [filteredProductsModal, setFilteredProductsModal] = useState({
-    open: false,
-    title: '',
-    filterType: 'all' as 'lowStock' | 'outOfStock' | 'inStock' | 'all'
   });
   const [productDetailsModal, setProductDetailsModal] = useState({
     open: false,
@@ -481,11 +475,10 @@ const Products = () => {
   };
 
   const openFilteredModal = (filterType: 'lowStock' | 'outOfStock' | 'inStock' | 'all', title: string) => {
-    setFilteredProductsModal({
-      open: true,
-      title,
-      filterType
-    });
+    // Use global modal function
+    if (filterType === 'lowStock') {
+      openLowStockModal();
+    }
   };
 
   const openProductDetails = (product: any) => {
@@ -639,7 +632,7 @@ const Products = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openFilteredModal('lowStock', 'Low Stock Products')}>
+        <Card className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openLowStockModal()}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-8 w-8 text-red-500" />
@@ -735,9 +728,10 @@ const Products = () => {
                         </div>
                         
                         <div className="flex justify-between items-center">
-                          <Badge variant={product.stock <= product.minStock ? "destructive" : "default"}>
-                            {product.stock} {product.unit}s
-                          </Badge>
+                          <StockStatusBadge 
+                            stock={product.stock}
+                            minStock={product.minStock}
+                          />
                           {product.stock <= product.minStock && (
                             <AlertTriangle className="h-4 w-4 text-red-500" />
                           )}
@@ -797,14 +791,6 @@ const Products = () => {
           />
         </Dialog>
       )}
-
-      <FilteredProductsModal
-        open={filteredProductsModal.open}
-        onOpenChange={(open) => setFilteredProductsModal(prev => ({ ...prev, open }))}
-        title={filteredProductsModal.title}
-        products={products}
-        filterType={filteredProductsModal.filterType}
-      />
 
       <ProductDetailsModal
         open={productDetailsModal.open}

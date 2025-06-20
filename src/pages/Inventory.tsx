@@ -13,9 +13,12 @@ import { Package, Search, Plus, AlertTriangle, TrendingUp, DollarSign, Edit, Tra
 import { useToast } from "@/hooks/use-toast";
 import { inventoryApi, productsApi, categoriesApi, unitsApi } from "@/services/api";
 import { FilteredProductsModal } from "@/components/FilteredProductsModal";
+import { StockStatusBadge, ClickableLowStock, ClickableOutOfStock } from "@/components/ui/stock-indicators";
+import { useGlobalModal } from "@/contexts/GlobalModalContext";
 
 const Inventory = () => {
   const { toast } = useToast();
+  const { openLowStockModal, openOutOfStockModal, openAllProductsModal } = useGlobalModal();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -37,11 +40,6 @@ const Inventory = () => {
     lowStockItems: 0,
     outOfStockItems: 0
   });
-  const [filteredProductsModal, setFilteredProductsModal] = useState({
-    open: false,
-    title: '',
-    filterType: 'all' as 'lowStock' | 'outOfStock' | 'inStock' | 'all'
-  });
 
   useEffect(() => {
     fetchInventory();
@@ -58,24 +56,6 @@ const Inventory = () => {
   useEffect(() => {
     fetchInventory();
   }, [currentPage]);
-
-  // Add function to fetch all products for the modal
-  const fetchAllProductsForModal = async (): Promise<any[]> => {
-    try {
-      const response = await inventoryApi.getAll({
-        limit: 10000 // Large number to get all products
-      });
-      
-      if (response.success) {
-        const inventoryData = response.data?.inventory || response.data || [];
-        return Array.isArray(inventoryData) ? inventoryData : [];
-      }
-      return [];
-    } catch (error) {
-      console.error('Failed to fetch all products for modal:', error);
-      return [];
-    }
-  };
 
   const fetchInventory = async () => {
     try {
@@ -413,11 +393,19 @@ const Inventory = () => {
   };
 
   const openFilteredModal = (filterType: 'lowStock' | 'outOfStock' | 'inStock' | 'all', title: string) => {
-    setFilteredProductsModal({
-      open: true,
-      title,
-      filterType
-    });
+    switch(filterType) {
+      case 'lowStock':
+        openLowStockModal();
+        break;
+      case 'outOfStock':
+        openOutOfStockModal();
+        break;
+      case 'all':
+        openAllProductsModal();
+        break;
+      default:
+        openAllProductsModal();
+    }
   };
 
   if (loading) {
@@ -562,9 +550,10 @@ const Inventory = () => {
                                   <p className="text-sm text-muted-foreground">SKU: {item.sku}</p>
                                   <p className="text-sm text-muted-foreground">Category: {item.category}</p>
                                 </div>
-                                <Badge className={`text-xs ${stockStatus.color}`}>
-                                  {stockStatus.status}
-                                </Badge>
+                                <StockStatusBadge 
+                                  stock={item.currentStock || 0}
+                                  minStock={item.minStock || 0}
+                                />
                               </div>
 
                               <div className="space-y-2">
@@ -702,15 +691,6 @@ const Inventory = () => {
           />
         </Dialog>
       )}
-
-      {/* Filtered Products Modal - Now with fetchAllProducts function */}
-      <FilteredProductsModal
-        open={filteredProductsModal.open}
-        onOpenChange={(open) => setFilteredProductsModal(prev => ({ ...prev, open }))}
-        title={filteredProductsModal.title}
-        filterType={filteredProductsModal.filterType}
-        onFetchAllProducts={fetchAllProductsForModal}
-      />
     </div>
   );
 };
