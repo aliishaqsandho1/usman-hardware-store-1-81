@@ -59,6 +59,24 @@ const Inventory = () => {
     fetchInventory();
   }, [currentPage]);
 
+  // Add function to fetch all products for the modal
+  const fetchAllProductsForModal = async (): Promise<any[]> => {
+    try {
+      const response = await inventoryApi.getAll({
+        limit: 10000 // Large number to get all products
+      });
+      
+      if (response.success) {
+        const inventoryData = response.data?.inventory || response.data || [];
+        return Array.isArray(inventoryData) ? inventoryData : [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Failed to fetch all products for modal:', error);
+      return [];
+    }
+  };
+
   const fetchInventory = async () => {
     try {
       setLoading(true);
@@ -685,13 +703,13 @@ const Inventory = () => {
         </Dialog>
       )}
 
-      {/* Filtered Products Modal */}
+      {/* Filtered Products Modal - Now with fetchAllProducts function */}
       <FilteredProductsModal
         open={filteredProductsModal.open}
         onOpenChange={(open) => setFilteredProductsModal(prev => ({ ...prev, open }))}
         title={filteredProductsModal.title}
-        products={inventory}
         filterType={filteredProductsModal.filterType}
+        onFetchAllProducts={fetchAllProductsForModal}
       />
     </div>
   );
