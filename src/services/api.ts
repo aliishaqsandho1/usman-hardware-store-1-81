@@ -1,3 +1,4 @@
+
 import { API_CONFIG } from "@/config/api";
 
 const handleResponse = async (response: Response) => {
@@ -363,6 +364,48 @@ export const unitsApi = {
       return handleResponse(response);
     } catch (error) {
       console.error('Units API delete error:', error);
+      throw error;
+    }
+  }
+};
+
+export const dashboardApi = {
+  getEnhancedStats: async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/enhanced-stats`);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Dashboard API getEnhancedStats error:', error);
+      throw error;
+    }
+  },
+
+  getCategoryPerformance: async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/category-performance`);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Dashboard API getCategoryPerformance error:', error);
+      throw error;
+    }
+  },
+
+  getDailySales: async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/daily-sales`);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Dashboard API getDailySales error:', error);
+      throw error;
+    }
+  },
+
+  getInventoryStatus: async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/dashboard/inventory-status`);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Dashboard API getInventoryStatus error:', error);
       throw error;
     }
   }
