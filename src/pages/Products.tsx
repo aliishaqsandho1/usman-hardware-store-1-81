@@ -16,40 +16,41 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Package, Search, Plus, Edit, Trash2, AlertTriangle, RefreshCw, FileText, Eye } from "lucide-react";
+import { Package, Search, Plus, Edit, Trash2, AlertTriangle, RefreshCw, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { productsApi, categoriesApi, unitsApi } from "@/services/api";
 import { ProductDetailsModal } from "@/components/sales/ProductDetailsModal";
-import { useGlobalModal } from "@/contexts/GlobalModalContext";
-import { StockStatusBadge, ClickableLowStock } from "@/components/ui/stock-indicators";
+import { FilteredProductsModal } from "@/components/FilteredProductsModal";
+import { Eye } from "lucide-react";
 import { generateSKU } from "@/utils/skuGenerator";
 import jsPDF from 'jspdf';
 
 const Products = () => {
   const { toast } = useToast();
-  const { openLowStockModal } = useGlobalModal();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [isCategoryEditDialogOpen, setIsCategoryEditDialogOpen] = useState(false);
   const [isPdfExportDialogOpen, setIsPdfExportDialogOpen] = useState(false);
   const [selectedExportCategory, setSelectedExportCategory] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [units, setUnits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
   const [newCategory, setNewCategory] = useState("");
-  const [editCategoryName, setEditCategoryName] = useState("");
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     totalItems: 0,
     itemsPerPage: 20
+  });
+  const [filteredProductsModal, setFilteredProductsModal] = useState({
+    open: false,
+    title: '',
+    filterType: 'all' as 'lowStock' | 'outOfStock' | 'inStock' | 'all'
   });
   const [productDetailsModal, setProductDetailsModal] = useState({
     open: false,
@@ -68,19 +69,15 @@ const Products = () => {
       if (response.success && response.data) {
         console.log('Categories response:', response.data);
         const categoryList = [
-          { value: "all", label: "All Categories", id: null }
+          { value: "all", label: "All Categories" }
         ];
         
         if (Array.isArray(response.data)) {
           response.data.forEach((cat: any) => {
             if (typeof cat === 'string') {
-              categoryList.push({ value: cat, label: cat, id: null });
+              categoryList.push({ value: cat, label: cat });
             } else if (cat && typeof cat === 'object' && cat.name) {
-              categoryList.push({ 
-                value: cat.name, 
-                label: cat.name, 
-                id: cat.id || null 
-              });
+              categoryList.push({ value: cat.name, label: cat.name });
             }
           });
         }
@@ -398,69 +395,9 @@ const Products = () => {
     }
   };
 
-  const handleEditCategory = async (formData: { name: string }) => {
-    if (!selectedCategory?.id) {
-      toast({
-        title: "Error",
-        description: "Cannot edit category without ID",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      const response = await categoriesApi.update(selectedCategory.id, formData);
-      if (response.success) {
-        setIsCategoryEditDialogOpen(false);
-        setSelectedCategory(null);
-        setEditCategoryName("");
-        fetchCategories();
-        toast({
-          title: "Category Updated",
-          description: "Category has been updated successfully.",
-        });
-      }
-    } catch (error) {
-      console.error('Failed to update category:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update category",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleDeleteCategory = async (categoryId: string | number) => {
-    if (!confirm("Are you sure you want to delete this category? This action cannot be undone.")) return;
-    
-    try {
-      const response = await categoriesApi.delete(categoryId);
-      if (response.success) {
-        fetchCategories();
-        toast({
-          title: "Category Deleted",
-          description: "Category has been deleted successfully.",
-        });
-      }
-    } catch (error) {
-      console.error('Failed to delete category:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete category",
-        variant: "destructive"
-      });
-    }
-  };
-
   const openEditDialog = (product: any) => {
     setSelectedProduct(product);
     setIsEditDialogOpen(true);
-  };
-
-  const openEditCategoryDialog = (category: any) => {
-    setSelectedCategory(category);
-    setEditCategoryName(category.label);
-    setIsCategoryEditDialogOpen(true);
   };
 
   const getCategoryColor = (category: string) => {
@@ -544,10 +481,11 @@ const Products = () => {
   };
 
   const openFilteredModal = (filterType: 'lowStock' | 'outOfStock' | 'inStock' | 'all', title: string) => {
-    // Use global modal function
-    if (filterType === 'lowStock') {
-      openLowStockModal();
-    }
+    setFilteredProductsModal({
+      open: true,
+      title,
+      filterType
+    });
   };
 
   const openProductDetails = (product: any) => {
@@ -569,7 +507,7 @@ const Products = () => {
 
   return (
     <div className="flex-1 p-2 space-y-3 min-h-[calc(100vh-65px)] bg-background no-horizontal-scroll">
-      {/* HEADER AND BUTTONS */}
+      {/* HEADER AND BUTTONS: now stacked on small screens */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <div className="flex items-center gap-4">
           <div>
@@ -577,6 +515,7 @@ const Products = () => {
             <p className="text-muted-foreground">Manage your inventory and product catalog</p>
           </div>
         </div>
+        {/* The button group now stacks on sm, stays in-header on md+ */}
         <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
             <DialogTrigger asChild>
@@ -637,71 +576,6 @@ const Products = () => {
           </Dialog>
         </div>
       </div>
-
-      {/* Category Management Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Manage Categories</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {categories.filter(cat => cat.value !== "all").map((category) => (
-              <div key={category.value} className="flex items-center justify-between p-3 border rounded-lg">
-                <span className="font-medium">{category.label}</span>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => openEditCategoryDialog(category)}
-                    disabled={!category.id}
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-red-600 hover:text-red-700"
-                    onClick={() => category.id && handleDeleteCategory(category.id)}
-                    disabled={!category.id}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Edit Category Dialog */}
-      <Dialog open={isCategoryEditDialogOpen} onOpenChange={setIsCategoryEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Category</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="editCategoryName">Category Name</Label>
-              <Input
-                id="editCategoryName"
-                value={editCategoryName}
-                onChange={(e) => setEditCategoryName(e.target.value)}
-                placeholder="Enter category name"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => handleEditCategory({ name: editCategoryName })} 
-                className="flex-1"
-                disabled={!editCategoryName.trim()}
-              >
-                Update Category
-              </Button>
-              <Button variant="outline" onClick={() => setIsCategoryEditDialogOpen(false)}>Cancel</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* PDF Export Category Selection Dialog */}
       <Dialog open={isPdfExportDialogOpen} onOpenChange={setIsPdfExportDialogOpen}>
@@ -765,7 +639,7 @@ const Products = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openLowStockModal()}>
+        <Card className="border-l-4 border-l-red-500 cursor-pointer hover:shadow-lg transition-shadow" onClick={() => openFilteredModal('lowStock', 'Low Stock Products')}>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-8 w-8 text-red-500" />
@@ -861,10 +735,9 @@ const Products = () => {
                         </div>
                         
                         <div className="flex justify-between items-center">
-                          <StockStatusBadge 
-                            stock={product.stock}
-                            minStock={product.minStock}
-                          />
+                          <Badge variant={product.stock <= product.minStock ? "destructive" : "default"}>
+                            {product.stock} {product.unit}s
+                          </Badge>
                           {product.stock <= product.minStock && (
                             <AlertTriangle className="h-4 w-4 text-red-500" />
                           )}
@@ -924,6 +797,14 @@ const Products = () => {
           />
         </Dialog>
       )}
+
+      <FilteredProductsModal
+        open={filteredProductsModal.open}
+        onOpenChange={(open) => setFilteredProductsModal(prev => ({ ...prev, open }))}
+        title={filteredProductsModal.title}
+        products={products}
+        filterType={filteredProductsModal.filterType}
+      />
 
       <ProductDetailsModal
         open={productDetailsModal.open}
