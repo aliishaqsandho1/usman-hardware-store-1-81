@@ -180,6 +180,38 @@ export const salesApi = {
       console.error('Sales API delete error:', error);
       throw error;
     }
+  },
+
+  updateStatus: async (id: number, status: string) => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/sales/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status })
+      });
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Sales API updateStatus error:', error);
+      throw error;
+    }
+  },
+
+  adjustOrder: async (id: number, adjustmentData: any) => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/sales/${id}/adjust`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(adjustmentData)
+      });
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Sales API adjustOrder error:', error);
+      throw error;
+    }
   }
 };
 
@@ -188,7 +220,8 @@ export const customersApi = {
     const queryParams = new URLSearchParams(params).toString();
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}/customers?${queryParams}`);
-      return handleResponse(response);
+      const result = await handleResponse(response);
+      return { ...result, data: { customers: result.data } };
     } catch (error) {
       console.error('Customers API getAll error:', error);
       throw error;
@@ -214,7 +247,8 @@ export const customersApi = {
         },
         body: JSON.stringify(customerData)
       });
-      return handleResponse(response);
+      const result = await handleResponse(response);
+      return { ...result, data: { ...result.data, message: 'Customer created successfully' } };
     } catch (error) {
       console.error('Customers API create error:', error);
       throw error;
@@ -230,7 +264,8 @@ export const customersApi = {
         },
         body: JSON.stringify(customerData)
       });
-      return handleResponse(response);
+      const result = await handleResponse(response);
+      return { ...result, data: { ...result.data, message: 'Customer updated successfully' } };
     } catch (error) {
       console.error('Customers API update error:', error);
       throw error;
@@ -242,7 +277,8 @@ export const customersApi = {
       const response = await fetch(`${API_CONFIG.BASE_URL}/customers/${id}`, {
         method: 'DELETE',
       });
-      return handleResponse(response);
+      const result = await handleResponse(response);
+      return { ...result, data: { ...result.data, message: 'Customer deleted successfully' } };
     } catch (error) {
       console.error('Customers API delete error:', error);
       throw error;
@@ -406,6 +442,55 @@ export const dashboardApi = {
       return handleResponse(response);
     } catch (error) {
       console.error('Dashboard API getInventoryStatus error:', error);
+      throw error;
+    }
+  }
+};
+
+// Add missing API exports to fix build errors
+export const notificationsApi = {
+  getAll: async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/notifications`);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Notifications API getAll error:', error);
+      throw error;
+    }
+  }
+};
+
+export const suppliersApi = {
+  getAll: async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/suppliers`);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Suppliers API getAll error:', error);
+      throw error;
+    }
+  }
+};
+
+export const purchaseOrdersApi = {
+  getAll: async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/purchase-orders`);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Purchase Orders API getAll error:', error);
+      throw error;
+    }
+  }
+};
+
+export const quotationsApi = {
+  getAll: async () => {
+    try {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/quotations`);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Quotations API getAll error:', error);
       throw error;
     }
   }
